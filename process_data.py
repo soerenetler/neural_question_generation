@@ -43,10 +43,10 @@ with open(TRAIN_TGT) as f:
     question_train = [line.split() for line in f.readlines()]
 
 maxlen = max([len(sentence) for sentence in sentence_train])
-print 'train sentences max length : %d '%maxlen
+print 'train sentences max length : %d ' % maxlen
 
 maxlen = max([len(sentence) for sentence in question_train])
-print 'train questions max length : %d \n'%maxlen
+print 'train questions max length : %d \n' % maxlen
 
 
 # Dev data
@@ -57,45 +57,45 @@ with open(DEV_TGT) as f:
     question_dev = [line.split() for line in f.readlines()]
 
 maxlen = max([len(sentence) for sentence in sentence_dev])
-print 'dev sentences max length : %d '%maxlen
+print 'dev sentences max length : %d ' % maxlen
 
 maxlen = max([len(sentence) for sentence in question_dev])
-print 'dev questions max length : %d \n'%maxlen
+print 'dev questions max length : %d \n' % maxlen
 
 # Test data
 with open(TEST_SRC) as f:
     sentence_test = [line.split() for line in f.readlines()]
 
 with open(TEST_TGT) as f:
-    question_test = [line.split() for line in f.readlines()] 
-    
+    question_test = [line.split() for line in f.readlines()]
+
 maxlen = max([len(sentence) for sentence in sentence_test])
-print 'test sentences max length : %d '%maxlen
+print 'test sentences max length : %d ' % maxlen
 
 maxlen = max([len(sentence) for sentence in question_test])
-print 'test questions max length : %d \n'%maxlen
+print 'test questions max length : %d \n' % maxlen
 
 # <<< Read data and Check max-length
 
 # >>> Filtering data with max-length
 
-print 'restrict max length of train_sentence as %d'%maxlen_s_train
-print 'restrict max length of train_question as %d'%maxlen_q_train
-print 'restrict max length of dev_sentence as %d'%maxlen_s_dev
-print 'restrict max length of dev_question as %d'%maxlen_q_dev
-print 'restrict max length of test_sentence as %d'%maxlen_s_test
-print 'restrict max length of test_question as %d\n'%maxlen_q_test
+print 'restrict max length of train_sentence as %d' % maxlen_s_train
+print 'restrict max length of train_question as %d' % maxlen_q_train
+print 'restrict max length of dev_sentence as %d' % maxlen_s_dev
+print 'restrict max length of dev_question as %d' % maxlen_q_dev
+print 'restrict max length of test_sentence as %d' % maxlen_s_test
+print 'restrict max length of test_question as %d\n' % maxlen_q_test
+
 
 def filter_with_maxlen(maxlen_s, maxlen_q, sentence, question):
     # Filtering with maxlen(sentence)
     temp_sentence = list()
     temp_question = list()
-    
+
     for i, line in enumerate(sentence):
         if (len(line) <= maxlen_s):
             temp_sentence.append(line)
             temp_question.append(question[i])
-            
 
     # Filtering with maxlen(question)
     filtered_sentence = list()
@@ -105,12 +105,13 @@ def filter_with_maxlen(maxlen_s, maxlen_q, sentence, question):
         if len(line) <= maxlen_q:
             filtered_sentence.append(temp_sentence[i])
             filtered_question.append(line)
-            
+
     return filtered_sentence, filtered_question
+
 
 # Train data
 filtered_sentence_train, filtered_question_train = filter_with_maxlen(
-    maxlen_s_train, maxlen_q_train, sentence_train, question_train)        
+    maxlen_s_train, maxlen_q_train, sentence_train, question_train)
 
 # Dev data
 filtered_sentence_dev, filtered_question_dev = filter_with_maxlen(
@@ -128,11 +129,11 @@ with open('data/processed/sentence_train.txt', 'w') as f:
 with open('data/processed/question_train.txt', 'w') as f:
     for line in filtered_question_train:
         f.write(' '.join(line) + '\n')
-        
+
 with open('data/processed/sentence_dev.txt', 'w') as f:
     for line in filtered_sentence_dev:
         f.write(' '.join(line) + '\n')
-        
+
 with open('data/processed/question_dev.txt', 'w') as f:
     for line in filtered_question_dev:
         f.write(' '.join(line) + '\n')
@@ -140,7 +141,7 @@ with open('data/processed/question_dev.txt', 'w') as f:
 with open('data/processed/sentence_test.txt', 'w') as f:
     for line in filtered_sentence_test:
         f.write(' '.join(line) + '\n')
-        
+
 with open('data/processed/question_test.txt', 'w') as f:
     for line in filtered_question_test:
         f.write(' '.join(line) + '\n')
@@ -148,16 +149,17 @@ with open('data/processed/question_test.txt', 'w') as f:
 
 # Make vocab with filtered sentences and questions(train) >>>
 
-all_sentence  = filtered_sentence_train + filtered_question_train
+all_sentence = filtered_sentence_train + filtered_question_train
 
 # Make vocab with word frequency
 wordcount = defaultdict(int)
 for sentence in all_sentence:
     for word in sentence:
-        wordcount[word]+=1
-sorted_wordlist = [(k, wordcount[k]) for k in sorted(wordcount, key=wordcount.get, reverse=True)]
+        wordcount[word] += 1
+sorted_wordlist = [(k, wordcount[k])
+                   for k in sorted(wordcount, key=wordcount.get, reverse=True)]
 
-print 'resize dictionary with %d most frequent words...'%dic_size
+print 'resize dictionary with %d most frequent words...' % dic_size
 resized_dic = dict(sorted_wordlist[:(dic_size-4)])
 
 word2idx = dict()
@@ -178,9 +180,11 @@ with open(vocab_dir, 'w') as f:
 # <<< Make vocab with filtered sentences and questions(train)
 
 # Process data with vocab >>>
-def process(data, vocab, maxlen, if_go = False):
+
+
+def process(data, vocab, maxlen, if_go=False):
     if if_go:
-        maxlen = maxlen + 2 # include <GO> and <EOS>
+        maxlen = maxlen + 2  # include <GO> and <EOS>
     processed_data = list()
     length_data = list()
     for line in data:
@@ -194,21 +198,29 @@ def process(data, vocab, maxlen, if_go = False):
                 processed_data[-1].append(word2idx['<UNK>'])
         if if_go:
             processed_data[-1].append(word2idx['<EOS>'])
-        length_data.append(len(processed_data[-1])) 
-        processed_data[-1] = processed_data[-1] + [word2idx['<PAD>']] * (maxlen - len(processed_data[-1]))
+        length_data.append(len(processed_data[-1]))
+        processed_data[-1] = processed_data[-1] + \
+            [word2idx['<PAD>']] * (maxlen - len(processed_data[-1]))
     return processed_data, length_data
 
+
 # Train data
-processed_sentence_train, length_sentence_train = process(filtered_sentence_train, word2idx, maxlen_s_train, if_go = False)
-processed_question_train, length_question_train = process(filtered_question_train, word2idx, maxlen_q_train, if_go = True)
+processed_sentence_train, length_sentence_train = process(
+    filtered_sentence_train, word2idx, maxlen_s_train, if_go=False)
+processed_question_train, length_question_train = process(
+    filtered_question_train, word2idx, maxlen_q_train, if_go=True)
 
 # Eval data
-processed_sentence_dev, length_sentence_dev = process(filtered_sentence_dev, word2idx, maxlen_s_dev, if_go = False)
-processed_question_dev, length_question_dev = process(filtered_question_dev, word2idx, maxlen_q_dev, if_go = True)
+processed_sentence_dev, length_sentence_dev = process(
+    filtered_sentence_dev, word2idx, maxlen_s_dev, if_go=False)
+processed_question_dev, length_question_dev = process(
+    filtered_question_dev, word2idx, maxlen_q_dev, if_go=True)
 
 # Test data
-processed_sentence_test, length_sentence_test = process(filtered_sentence_test, word2idx, maxlen_s_test, if_go = False)
-processed_question_test, length_question_test = process(filtered_question_test, word2idx, maxlen_q_test, if_go = True)
+processed_sentence_test, length_sentence_test = process(
+    filtered_sentence_test, word2idx, maxlen_s_test, if_go=False)
+processed_question_test, length_question_test = process(
+    filtered_question_test, word2idx, maxlen_q_test, if_go=True)
 
 print 'Processing Complete'
 # <<< Process data with vocab
@@ -222,5 +234,3 @@ np.save(question_outfile_dev, processed_question_dev)
 np.save(sentence_outfile_test, processed_sentence_test)
 np.save(question_outfile_test, processed_question_test)
 print 'Saving Complete'
-
-

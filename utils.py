@@ -2,27 +2,28 @@ import numpy as np
 import tensorflow as tf
 import nltk
 
-def embed_op(inputs, pre_embedding, voca_size, embedding_size = None, embedding_trainable = False, dtype  = tf.float32, name = 'embedding'):
-    if pre_embedding == None:
-        with tf.variable_scope('EmbeddingScope', reuse = tf.AUTO_REUSE):
-            embedding = tf.get_variable(
-                    name, 
-                    [voca_size, embedding_size], 
-                    dtype = dtype,
 
-                    )
+def embed_op(inputs, pre_embedding, voca_size, embedding_size=None, embedding_trainable=False, dtype=tf.float32, name='embedding'):
+    if pre_embedding == None:
+        with tf.variable_scope('EmbeddingScope', reuse=tf.AUTO_REUSE):
+            embedding = tf.get_variable(
+                name,
+                [voca_size, embedding_size],
+                dtype=dtype,
+
+            )
     else:
         embedding = np.load(pre_embedding)
-        with tf.variable_scope('EmbeddingScope', reuse = tf.AUTO_REUSE):
+        with tf.variable_scope('EmbeddingScope', reuse=tf.AUTO_REUSE):
             init = tf.constant_initializer(embedding)
             embedding_size = embedding.shape[-1]
             embedding = tf.get_variable(
-                    name,
-                    [voca_size, embedding_size],
-                    initializer = init,
-                    dtype = dtype,
-                    trainable = embedding_trainable 
-                    )
+                name,
+                [voca_size, embedding_size],
+                initializer=init,
+                dtype=dtype,
+                trainable=embedding_trainable
+            )
 
     tf.summary.histogram(embedding.name + '/value', embedding)
     return tf.nn.embedding_lookup(embedding, inputs), embedding
@@ -38,11 +39,11 @@ def bleu_score(labels, predictions,
         predictions = predictions.tolist()
         for i in range(len(predictions)):
             prediction = predictions[i]
-            if 2 in prediction: # 2: EOS
+            if 2 in prediction:  # 2: EOS
                 predictions[i] = prediction[:prediction.index(2)+1]
 
         labels = [
-            [[w_id for w_id in label if w_id != 0]] # 0: PAD
+            [[w_id for w_id in label if w_id != 0]]  # 0: PAD
             for label in labels.tolist()]
         predictions = [
             [w_id for w_id in prediction]

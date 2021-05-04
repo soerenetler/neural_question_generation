@@ -30,15 +30,15 @@ else:
 print 'Generate pre-trained embedding with Glove'
 with open('data/processed/vocab_xinyadu.dic') as f:
     vocab = pkl.load(f)
-    
-embedding_vocab = np.tile(embedding['UNKNOWN'],[len(vocab),1])
+
+embedding_vocab = np.tile(embedding['UNKNOWN'], [len(vocab), 1])
 '''
 vocab['<PAD>'] = 0
 vocab['<GO>'] = 1
 vocab['<EOS>'] = 2
 vocab['<UNK>'] = 3
 '''
-embedding_vocab[0] = 0.0 # vocab['<PAD>'] = 1
+embedding_vocab[0] = 0.0  # vocab['<PAD>'] = 1
 embedding_vocab[1] = embedding['<s>']
 embedding_vocab[2] = embedding['EOS']
 embedding_vocab[3] = embedding['UNKNOWN']
@@ -54,5 +54,5 @@ for word, idx in vocab.items():
 np.save('data/processed/glove_embedding.npy', embedding_vocab)
 
 # check how many unknown words
-print 'vocab size : %d' %len(embedding_vocab)
-print 'unknown word size : %d' %unk_num
+print 'vocab size : %d' % len(embedding_vocab)
+print 'unknown word size : %d' % unk_num
