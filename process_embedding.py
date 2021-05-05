@@ -7,28 +7,27 @@ data_dir = 'data/'
 glove = 'glove.840B.300d'
 
 if not os.path.exists(data_dir + 'processed/' + glove + '.dic.npy'):
-    print 'Reading original Glove file...'
-    f = open(data_dir + glove + '.txt')
-    lines = f.readlines()
-    f.close()
+    print('Reading original Glove file...')
+    with open(data_dir + glove + '.txt', 'r', encoding='utf-8') as f:
+        lines = f.readlines()
 
-    print 'Processing original Glove file to dictionary...\n'
+    print('Processing original Glove file to dictionary...\n')
     embedding = dict()
     for line in lines:
-        splited = line.split()
-        embedding[splited[0]] = map(float, splited[1:])
+        word, coefs = line.split(maxsplit=1)
+        embedding[word] = np.fromstring(coefs, "f", sep=" ", count=300)
 
     # Save Glove as dic file
     np.save(data_dir + 'processed/' + glove + '.dic.npy', embedding)
 
 else:
-    print 'Glove dictionary exists!'
-    print 'Loading Glove dictionary...\n'
-    embedding = np.load(data_dir + 'processed/' + glove + '.dic.npy').item()
+    print('Glove dictionary exists!')
+    print('Loading Glove dictionary...\n')
+    embedding = np.load(data_dir + 'processed/' + glove + '.dic.npy', allow_pickle=True).item()
 
 # Make pre-trianed embedding with GloVe
-print 'Generate pre-trained embedding with Glove'
-with open('data/processed/vocab_xinyadu.dic') as f:
+print('Generate pre-trained embedding with Glove')
+with open('data/processed/vocab_xinyadu.dic', 'rb') as f:
     vocab = pkl.load(f)
 
 embedding_vocab = np.tile(embedding['UNKNOWN'], [len(vocab), 1])
@@ -54,5 +53,5 @@ for word, idx in vocab.items():
 np.save('data/processed/glove_embedding.npy', embedding_vocab)
 
 # check how many unknown words
-print 'vocab size : %d' % len(embedding_vocab)
-print 'unknown word size : %d' % unk_num
+print('vocab size : %d' % len(embedding_vocab))
+print('unknown word size : %d' % unk_num)

@@ -36,55 +36,55 @@ vocab_dir = 'data/processed/vocab_xinyadu.dic'
 # Read data and Check max-length >>>
 
 # Train data
-with open(TRAIN_SRC) as f:
+with open(TRAIN_SRC, 'r', encoding='utf-8') as f:
     sentence_train = [line.split() for line in f.readlines()]
 
-with open(TRAIN_TGT) as f:
+with open(TRAIN_TGT, 'r', encoding='utf-8') as f:
     question_train = [line.split() for line in f.readlines()]
 
 maxlen = max([len(sentence) for sentence in sentence_train])
-print 'train sentences max length : %d ' % maxlen
+print('train sentences max length : %d ' % maxlen)
 
 maxlen = max([len(sentence) for sentence in question_train])
-print 'train questions max length : %d \n' % maxlen
+print('train questions max length : %d \n' % maxlen)
 
 
 # Dev data
-with open(DEV_SRC) as f:
+with open(DEV_SRC, 'r', encoding='utf-8') as f:
     sentence_dev = [line.split() for line in f.readlines()]
 
-with open(DEV_TGT) as f:
+with open(DEV_TGT, 'r', encoding='utf-8') as f:
     question_dev = [line.split() for line in f.readlines()]
 
 maxlen = max([len(sentence) for sentence in sentence_dev])
-print 'dev sentences max length : %d ' % maxlen
+print('dev sentences max length : %d ' % maxlen)
 
 maxlen = max([len(sentence) for sentence in question_dev])
-print 'dev questions max length : %d \n' % maxlen
+print('dev questions max length : %d \n' % maxlen)
 
 # Test data
-with open(TEST_SRC) as f:
+with open(TEST_SRC, 'r', encoding='utf-8') as f:
     sentence_test = [line.split() for line in f.readlines()]
 
-with open(TEST_TGT) as f:
+with open(TEST_TGT, 'r', encoding='utf-8') as f:
     question_test = [line.split() for line in f.readlines()]
 
 maxlen = max([len(sentence) for sentence in sentence_test])
-print 'test sentences max length : %d ' % maxlen
+print('test sentences max length : %d ' % maxlen)
 
 maxlen = max([len(sentence) for sentence in question_test])
-print 'test questions max length : %d \n' % maxlen
+print('test questions max length : %d \n' % maxlen)
 
 # <<< Read data and Check max-length
 
 # >>> Filtering data with max-length
 
-print 'restrict max length of train_sentence as %d' % maxlen_s_train
-print 'restrict max length of train_question as %d' % maxlen_q_train
-print 'restrict max length of dev_sentence as %d' % maxlen_s_dev
-print 'restrict max length of dev_question as %d' % maxlen_q_dev
-print 'restrict max length of test_sentence as %d' % maxlen_s_test
-print 'restrict max length of test_question as %d\n' % maxlen_q_test
+print('restrict max length of train_sentence as %d' % maxlen_s_train)
+print('restrict max length of train_question as %d' % maxlen_q_train)
+print('restrict max length of dev_sentence as %d' % maxlen_s_dev)
+print('restrict max length of dev_question as %d' % maxlen_q_dev)
+print('restrict max length of test_sentence as %d' % maxlen_s_test)
+print('restrict max length of test_question as %d\n' % maxlen_q_test)
 
 
 def filter_with_maxlen(maxlen_s, maxlen_q, sentence, question):
@@ -122,27 +122,27 @@ filtered_sentence_test, filtered_question_test = filter_with_maxlen(
     maxlen_s_test, maxlen_q_test, sentence_test, question_test)
 
 # Save filtered data
-with open('data/processed/sentence_train.txt', 'w') as f:
+with open('data/processed/sentence_train.txt', 'w', encoding='utf-8') as f:
     for line in filtered_sentence_train:
         f.write(' '.join(line) + '\n')
 
-with open('data/processed/question_train.txt', 'w') as f:
+with open('data/processed/question_train.txt', 'w', encoding='utf-8') as f:
     for line in filtered_question_train:
         f.write(' '.join(line) + '\n')
 
-with open('data/processed/sentence_dev.txt', 'w') as f:
+with open('data/processed/sentence_dev.txt', 'w', encoding='utf-8') as f:
     for line in filtered_sentence_dev:
         f.write(' '.join(line) + '\n')
 
-with open('data/processed/question_dev.txt', 'w') as f:
+with open('data/processed/question_dev.txt', 'w', encoding='utf-8') as f:
     for line in filtered_question_dev:
         f.write(' '.join(line) + '\n')
 
-with open('data/processed/sentence_test.txt', 'w') as f:
+with open('data/processed/sentence_test.txt', 'w', encoding='utf-8') as f:
     for line in filtered_sentence_test:
         f.write(' '.join(line) + '\n')
 
-with open('data/processed/question_test.txt', 'w') as f:
+with open('data/processed/question_test.txt', 'w', encoding='utf-8') as f:
     for line in filtered_question_test:
         f.write(' '.join(line) + '\n')
 # <<< Filtering data with max-length
@@ -159,7 +159,7 @@ for sentence in all_sentence:
 sorted_wordlist = [(k, wordcount[k])
                    for k in sorted(wordcount, key=wordcount.get, reverse=True)]
 
-print 'resize dictionary with %d most frequent words...' % dic_size
+print('resize dictionary with %d most frequent words...' % dic_size)
 resized_dic = dict(sorted_wordlist[:(dic_size-4)])
 
 word2idx = dict()
@@ -173,8 +173,8 @@ for word in resized_dic:
     idx += 1
 
 # Save dic
-print 'save Dic File...'
-with open(vocab_dir, 'w') as f:
+print('save Dic File...')
+with open(vocab_dir, 'wb') as f:
     pkl.dump(word2idx, f)
 
 # <<< Make vocab with filtered sentences and questions(train)
@@ -222,7 +222,7 @@ processed_sentence_test, length_sentence_test = process(
 processed_question_test, length_question_test = process(
     filtered_question_test, word2idx, maxlen_q_test, if_go=True)
 
-print 'Processing Complete'
+print('Processing Complete')
 # <<< Process data with vocab
 
 np.save(sentence_outfile_train, processed_sentence_train)
@@ -233,4 +233,4 @@ np.save(question_outfile_dev, processed_question_dev)
 
 np.save(sentence_outfile_test, processed_sentence_test)
 np.save(question_outfile_test, processed_question_test)
-print 'Saving Complete'
+print('Saving Complete')

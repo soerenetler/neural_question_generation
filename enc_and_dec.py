@@ -150,8 +150,8 @@ class Decoder(_BaseClass):
         else:
             initial_state = self.out_dec_cell.zero_state(
                 dtype=self.dtype, batch_size=self.batch_size * self.beam_width)
-            print type(self.length_penalty_weight)
-            print '----------------------------------'
+            print(type(self.length_penalty_weight))
+            print('----------------------------------')
             decoder = tf.contrib.seq2seq.BeamSearchDecoder(
                 cell=self.out_dec_cell,
                 embedding=embedding,

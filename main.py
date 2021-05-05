@@ -19,12 +19,12 @@ def remove_eos(sentence, eos='<EOS>', pad='<PAD>'):
 
 
 def write_result(predict_results, dic_dir):
-    print 'Load dic file...'
+    print('Load dic file...')
     with open(dic_dir) as dic:
         dic_file = pkl.load(dic)
     reversed_dic = dict((y, x) for x, y in dic_file.iteritems())
 
-    print 'Writing into file...'
+    print('Writing into file...')
     with open(FLAGS.pred_dir, 'w') as f:
         while True:
             try:
