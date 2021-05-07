@@ -52,7 +52,7 @@ def main(unused):
 
     # train and evaluate
     if FLAGS.mode == 'train':
-        q_generation.fit(train_input_data)
+        q_generation.fit(train_input_data, epochs=FLAGS.num_epochs)
 
     elif FLAGS.mode == 'eval':
         q_generation.evaluate(eval_input_data)
