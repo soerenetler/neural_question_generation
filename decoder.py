@@ -8,7 +8,7 @@ class Decoder(tf.keras.layers.Layer):
                  attn_type='bahdanau', voca_size=None,
                  beam_width=0, length_penalty_weight=1,
                  num_layer=1, hidden_size=512,
-                 cell_type='lstm', dropout=0.1, batch_sz=64, max_length_input=32, embedding_trainable= False,
+                 cell_type='lstm', dropout=0.1, batch_sz=64, max_length_input=32, embedding_trainable=False,
                  sample_prob=0.25):
 
         super(Decoder, self).__init__()
@@ -27,8 +27,8 @@ class Decoder(tf.keras.layers.Layer):
         self.embedding_dim = embedding_dim
         self.embedding_trainable = embedding_trainable
         self.batch_sz = batch_sz
-        self.max_length_input=max_length_input
-        self.max_length_output=max_length_input
+        self.max_length_input = max_length_input
+        self.max_length_output = max_length_input
 
         if self.pre_embedding == None:
             self.embd_layer = tf.keras.layers.Embedding(self.vocab_size,
@@ -43,7 +43,7 @@ class Decoder(tf.keras.layers.Layer):
                                                         trainable=self.embedding_trainable)
 
         print("hidden_size:", self.hidden_size)
-        
+
         # Define the fundamental cell for decoder recurrent structure
         self.dec_cell = self._create_cell()
 
@@ -52,11 +52,12 @@ class Decoder(tf.keras.layers.Layer):
 
         # Sampler
         self.sampler = tfa.seq2seq.sampler.TrainingSampler()
-        #else:  # EVAL & TEST
+        # else:  # EVAL & TEST
         #   self.sampler = tfa.seq2seq.GreedyEmbeddingSampler()
 
         # Create attention mechanism with memory = None
-        self.attention_mechanism = self._attention(None, self.batch_sz*[self.max_length_input])
+        self.attention_mechanism = self._attention(
+            None, self.batch_sz*[self.max_length_input])
 
         # Wrap attention mechanism with the fundamental rnn cell of decoder
         self.rnn_cell = tfa.seq2seq.AttentionWrapper(self.dec_cell,
@@ -66,15 +67,54 @@ class Decoder(tf.keras.layers.Layer):
         self.decoder = tfa.seq2seq.BasicDecoder(
             self.rnn_cell, sampler=self.sampler, output_layer=self.fc)
 
-    def call(self, dec_input, decoder_initial_state, start_token=1, end_token=2, training=False):
+    def call(self, dec_input, enc_output, enc_hidden, start_token=1, end_token=2, training=False):
         # batch_size should not be specified
         # if fixed, then the redundant evaluation data will make error
         # it may related to bug of tensorflow api
         if training:
+            # Set the AttentionMechanism object with encoder_outputs
+            self.attention_mechanism.setup_memory(enc_output)
+
+            decoder_initial_state = self.build_initial_state(
+                                        self.batch_sz, enc_hidden, tf.float32)
             embd_input = self.embd_layer(dec_input)
-            outputs, _, _ = self.decoder(embd_input, initial_state=decoder_initial_state, sequence_length=self.batch_sz*[self.max_length_output-1])
+            outputs, _, _ = self.decoder(embd_input, initial_state=decoder_initial_state,
+                                         sequence_length=self.batch_sz*[self.max_length_output-1])
         else:
-            raise RuntimeError("Ups")
+            start_tokens = tf.fill([self.batch_sz], start_token)
+
+            # From official documentation
+            # NOTE If you are using the BeamSearchDecoder with a cell wrapped in AttentionWrapper, then you must ensure that:
+            # The encoder output has been tiled to beam_width via tfa.seq2seq.tile_batch (NOT tf.tile).
+            # The batch_size argument passed to the get_initial_state method of this wrapper is equal to true_batch_size * beam_width.
+            # The initial state created with get_initial_state above contains a cell_state value containing properly tiled final state from the encoder.
+            enc_out = tfa.seq2seq.tile_batch(enc_output, multiplier=self.beam_width)
+            self.attention_mechanism.setup_memory(enc_out)
+
+            # set decoder_inital_state which is an AttentionWrapperState considering beam_width
+            hidden_state = tfa.seq2seq.tile_batch(enc_hidden, multiplier=self.beam_width)
+            decoder_initial_state = self.rnn_cell.get_initial_state(batch_size=self.beam_width*self.batch_sz, dtype=tf.float32)
+            decoder_initial_state = decoder_initial_state.clone(cell_state=hidden_state)
+
+            # Instantiate BeamSearchDecoder
+            decoder_instance = tfa.seq2seq.BeamSearchDecoder(self.rnn_cell,beam_width=self.beam_width, output_layer=self.fc)
+            decoder_embedding_matrix = self.embd_layer.variables[0]
+
+            # The BeamSearchDecoder object's call() function takes care of everything.
+            outputs, _, _ = decoder_instance(decoder_embedding_matrix, start_tokens=start_tokens, end_token=end_token, initial_state=decoder_initial_state)
+            # outputs is tfa.seq2seq.FinalBeamSearchDecoderOutput object. 
+            # The final beam predictions are stored in outputs.predicted_id
+            # outputs.beam_search_decoder_output is a tfa.seq2seq.BeamSearchDecoderOutput object which keep tracks of beam_scores and parent_ids while performing a beam decoding step
+            # final_state = tfa.seq2seq.BeamSearchDecoderState object.
+            # Sequence Length = [inference_batch_size, beam_width] details the maximum length of the beams that are generated
+
+            # outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width)
+            # outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width)
+            # Convert the shape of outputs and beam_scores to (inference_batch_size, beam_width, time_step_outputs)
+            final_outputs = tf.transpose(outputs.predicted_ids, perm=(0,2,1))
+            beam_scores = tf.transpose(outputs.beam_search_decoder_output.scores, perm=(0,2,1))
+
+            outputs = final_outputs.numpy()
         return outputs
 
         # Decoder initial state setting
@@ -173,12 +213,13 @@ class Decoder(tf.keras.layers.Layer):
     # Build cell for encoder and decoder
     def _create_cell(self):
         rnn_cell = tf.keras.layers.GRUCell(
-                self.hidden_size, dropout=self.dropout) if self.cell_type == 'gru' else tf.keras.layers.LSTMCell(self.hidden_size, dropout=self.dropout)
+            self.hidden_size, dropout=self.dropout) if self.cell_type == 'gru' else tf.keras.layers.LSTMCell(self.hidden_size, dropout=self.dropout)
         return rnn_cell if self.num_layer == 1 else tf.keras.layers.StackedRNNCells(([rnn_cell for _ in range(self.num_layer)]))
 
     def build_initial_state(self, batch_sz, encoder_state, Dtype):
-        decoder_initial_state = self.rnn_cell.get_initial_state(batch_size=batch_sz, dtype=Dtype)
+        decoder_initial_state = self.rnn_cell.get_initial_state(
+            batch_size=batch_sz, dtype=Dtype)
         print("decoder_initial_state: ", decoder_initial_state)
-        decoder_initial_state = decoder_initial_state.clone(cell_state=encoder_state)
+        decoder_initial_state = decoder_initial_state.clone(
+            cell_state=encoder_state)
         return decoder_initial_state
-

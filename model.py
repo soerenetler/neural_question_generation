@@ -65,15 +65,9 @@ class QG(tf.keras.Model):
 
         enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden, training=training)
 
-        # Set the AttentionMechanism object with encoder_outputs
-        self.decoder.attention_mechanism.setup_memory(enc_output)
-
-
         print("enc_hidden: ", enc_hidden)
         # Create AttentionWrapperState as initial_state for decoder
-        decoder_initial_state = self.decoder.build_initial_state(
-            self.batch_size, enc_hidden, tf.float32)
-        pred = self.decoder(dec_input, decoder_initial_state, training=training)
+        pred = self.decoder(dec_input, enc_output, enc_hidden, training=training)
 
         return pred
 
