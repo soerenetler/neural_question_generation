@@ -108,11 +108,11 @@ class Encoder(tf.keras.layers.Layer):
     def initialize_hidden_state(self):
         if self.enc_type == 'mono':
             if self.cell_type == 'gru':
-                tf.zeros((self.batch_sz, self.hidden_size))
+                return tf.zeros((self.batch_sz, self.hidden_size))
             else:  # LSTM
                 return [tf.zeros((self.batch_sz, self.hidden_size)), tf.zeros((self.batch_sz, self.hidden_size))]
         else: # bi
             if self.cell_type == 'gru':
-                 [tf.zeros((self.batch_sz, self.hidden_size))] *2
+                 return [tf.zeros((self.batch_sz, self.hidden_size))] *2
             else:  # LSTM
                 return [tf.zeros((self.batch_sz, self.hidden_size)), tf.zeros((self.batch_sz, self.hidden_size))] * 2
