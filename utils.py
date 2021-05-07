@@ -62,6 +62,8 @@ def bleu_score(labels, predictions,
 def loss_function(real, pred):
     # real shape = (BATCH_SIZE, max_length_output)
     # pred shape = (BATCH_SIZE, max_length_output, tar_vocab_size )
+    print("real shape = (BATCH_SIZE, max_length_output): ", real.shape)
+    print("pred shape = (BATCH_SIZE, max_length_output, tar_vocab_size ), ", pred.shape)
     cross_entropy = tf.keras.losses.SparseCategoricalCrossentropy(
         from_logits=True, reduction='none')
     loss = cross_entropy(y_true=real, y_pred=pred)
