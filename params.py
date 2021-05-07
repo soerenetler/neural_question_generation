@@ -6,12 +6,12 @@ def basic_params():
 
         # File path
         # None or path to pretrained embedding
-        pre_embedding='data/processed/glove_embedding.npy',
+        pre_embedding=None,#'data/processed/glove_embedding.npy',
 
         # NN params
         voca_size=34004,
         embedding_size=300,
-        embedding_trainable=False,
+        embedding_trainable=True,
         hidden_size=512,
         cell_type='lstm',  # 'lstm' or 'gru'
         enc_type='mono',  # 'bi' or 'mono'
