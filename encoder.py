@@ -46,7 +46,7 @@ class Encoder(tf.keras.layers.Layer):
         elif self.enc_type == 'bi':
             print(enc_cell)
             self.rnn = tf.keras.layers.Bidirectional(tf.keras.layers.RNN(
-                enc_cell, return_sequences=True,
+                enc_cell, return_sequences=True, 
                 return_state=True))
 
         else:
@@ -64,18 +64,21 @@ class Encoder(tf.keras.layers.Layer):
             if self.cell_type == 'gru':
                 pass
             else:  # lstm
-                encoder_output, encoder_state_h, encoder_state_c=result_encoder
+                encoder_output, encoder_state_h, encoder_state_c = result_encoder
                 encoder_state = [encoder_state_h, encoder_state_c]
 
         elif self.enc_type == 'bi':
-            encoder_output = tf.concat(encoder_output, -1)
             if self.cell_type == 'gru':
+                encoder_output = tf.concat(encoder_output, -1)
                 if self.num_layer == 1:
                     encoder_state = tf.concat(encoder_state, -1)
                 else:  # multi layer
                     encoder_state = tuple(tf.concat(
                         [state_fw, state_bw], -1) for state_fw, state_bw in zip(encoder_state[0], encoder_state[1]))
             else:  # lstm
+                print("result_encoder ", len(result_encoder))
+                encoder_output, encoder_state_h, encoder_state_c = result_encoder
+                encoder_output = tf.concat(encoder_output, -1)
                 if self.num_layer == 1:
                     encoder_state_c = tf.concat(
                         [encoder_state[0].c, encoder_state[1].c], 1)
@@ -103,7 +106,13 @@ class Encoder(tf.keras.layers.Layer):
         return rnn_cell if self.num_layer == 1 else tf.keras.layers.StackedRNNCells(([rnn_cell for _ in range(self.num_layer)]))
 
     def initialize_hidden_state(self):
-        if self.cell_type == 'gru':
-            pass
-        else:  # LSTM
-            return [tf.zeros((self.batch_sz, self.hidden_size)), tf.zeros((self.batch_sz, self.hidden_size))]
+        if self.enc_type == 'mono':
+            if self.cell_type == 'gru':
+                pass
+            else:  # LSTM
+                return [tf.zeros((self.batch_sz, self.hidden_size)), tf.zeros((self.batch_sz, self.hidden_size))]
+        else: # bi
+            if self.cell_type == 'gru':
+                pass
+            else:  # LSTM
+                return [tf.zeros((self.batch_sz, self.hidden_size)), tf.zeros((self.batch_sz, self.hidden_size))] * 2

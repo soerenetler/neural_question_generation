@@ -76,35 +76,42 @@ class Decoder(tf.keras.layers.Layer):
             self.attention_mechanism.setup_memory(enc_output)
 
             decoder_initial_state = self.build_initial_state(
-                                        self.batch_sz, enc_hidden, tf.float32)
+                self.batch_sz, enc_hidden, tf.float32)
             embd_input = self.embd_layer(dec_input)
             outputs, _, _ = self.decoder(embd_input, initial_state=decoder_initial_state,
                                          sequence_length=self.batch_sz*[self.max_length_output-1])
         else:
             start_tokens = tf.fill([self.batch_sz], start_token)
-            
+
             # From official documentation
             # NOTE If you are using the BeamSearchDecoder with a cell wrapped in AttentionWrapper, then you must ensure that:
             # The encoder output has been tiled to beam_width via tfa.seq2seq.tile_batch (NOT tf.tile).
             # The batch_size argument passed to the get_initial_state method of this wrapper is equal to true_batch_size * beam_width.
             # The initial state created with get_initial_state above contains a cell_state value containing properly tiled final state from the encoder.
-            enc_out = tfa.seq2seq.tile_batch(enc_output, multiplier=self.beam_width)
+            enc_out = tfa.seq2seq.tile_batch(
+                enc_output, multiplier=self.beam_width)
             self.attention_mechanism.setup_memory(enc_out)
-            print("beam_with * [batch_size, max_length_input, rnn_units] :  3 * [1, 16, 1024]] :", enc_out.shape)
-
+            print(
+                "beam_with * [batch_size, max_length_input, rnn_units] :  3 * [1, 16, 1024]] :", enc_out.shape)
 
             # set decoder_inital_state which is an AttentionWrapperState considering beam_width
-            hidden_state = tfa.seq2seq.tile_batch(enc_hidden, multiplier=self.beam_width)
-            decoder_initial_state = self.rnn_cell.get_initial_state(batch_size=self.beam_width*self.batch_sz, dtype=tf.float32)
-            decoder_initial_state = decoder_initial_state.clone(cell_state=hidden_state)
+            hidden_state = tfa.seq2seq.tile_batch(
+                enc_hidden, multiplier=self.beam_width)
+            decoder_initial_state = self.rnn_cell.get_initial_state(
+                batch_size=self.beam_width*self.batch_sz, dtype=tf.float32)
+            decoder_initial_state = decoder_initial_state.clone(
+                cell_state=hidden_state)
 
             # Instantiate BeamSearchDecoder
-            decoder_instance = tfa.seq2seq.BeamSearchDecoder(self.rnn_cell,beam_width=self.beam_width, output_layer=self.fc)
+            decoder_instance = tfa.seq2seq.BeamSearchDecoder(
+                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc)
             decoder_embedding_matrix = self.embd_layer.variables[0]
+            print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
 
             # The BeamSearchDecoder object's call() function takes care of everything.
-            outputs, _, _ = decoder_instance(decoder_embedding_matrix, start_tokens=start_tokens, end_token=end_token, initial_state=decoder_initial_state)
-            # outputs is tfa.seq2seq.FinalBeamSearchDecoderOutput object. 
+            outputs, _, _ = decoder_instance(
+                decoder_embedding_matrix, start_tokens=start_tokens, end_token=end_token, initial_state=decoder_initial_state)
+            # outputs is tfa.seq2seq.FinalBeamSearchDecoderOutput object.
             # The final beam predictions are stored in outputs.predicted_id
             # outputs.beam_search_decoder_output is a tfa.seq2seq.BeamSearchDecoderOutput object which keep tracks of beam_scores and parent_ids while performing a beam decoding step
             # final_state = tfa.seq2seq.BeamSearchDecoderState object.
@@ -114,18 +121,19 @@ class Decoder(tf.keras.layers.Layer):
             # outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width)
             # Convert the shape of outputs and beam_scores to (inference_batch_size, beam_width, time_step_outputs)
             print(type(outputs.beam_search_decoder_output))
-            final_outputs = tf.transpose(outputs.predicted_ids, perm=(0,2,1))
-            beam_scores = tf.transpose(outputs.beam_search_decoder_output.scores, perm=(0,2,1))
+            final_outputs = tf.transpose(outputs.predicted_ids, perm=(0, 2, 1))
+            beam_scores = tf.transpose(
+                outputs.beam_search_decoder_output.scores, perm=(0, 2, 1))
             print("final_outputs ", final_outputs.shape)
             for beam, score in zip(final_outputs, beam_scores):
                 print(beam.shape, score.shape)
                 output = [a for a in beam]
                 beam_score = [a.sum() for a in score]
                 for i in range(len(output)):
-                    print('{} Predicted translation: {}  {}'.format(i+1, output[i], beam_score[i]))
+                    print('{} Predicted translation: {}  {}'.format(
+                        i+1, output[i], beam_score[i]))
 
-            
-            outputs = final_outputs[0]
+            outputs = final_outputs[:,0,:]  # [batch, length]
         return outputs
 
         # Decoder initial state setting

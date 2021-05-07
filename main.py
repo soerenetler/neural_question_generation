@@ -54,6 +54,8 @@ def main(unused):
 
     # train and evaluate
     if FLAGS.mode == 'train':
+        example_input_batch, example_target_batch = next(iter(train_input_data))
+        print("Shape train_input_data: ", example_input_batch.shape, example_target_batch.shape)
         q_generation.fit(train_input_data,
                          epochs=FLAGS.num_epochs,
                          validation_data=eval_input_data)
