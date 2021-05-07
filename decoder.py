@@ -106,7 +106,7 @@ class Decoder(tf.keras.layers.Layer):
 
             # Instantiate BeamSearchDecoder
             decoder_instance = tfa.seq2seq.BeamSearchDecoder(
-                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc)
+                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc, length_penalty_weight=self.length_penalty_weight, embedding=self.embd_layer)
             decoder_embedding_matrix = self.embd_layer.variables[0]
             print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
 

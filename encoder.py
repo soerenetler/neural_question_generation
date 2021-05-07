@@ -37,8 +37,6 @@ class Encoder(tf.keras.layers.Layer):
             batch_size=64, dtype=tf.float32))
         # Encoder
         if self.enc_type == 'mono':
-            # encoder_output: [batch_size, max_time, hidden_size]
-            # encoder_state: last hidden_state of encoder, [batch_size, hidden_size]
             print("enc_cell: ", enc_cell)
             self.rnn = tf.keras.layers.RNN(enc_cell, return_sequences=True,
                                            return_state=True)
@@ -63,6 +61,10 @@ class Encoder(tf.keras.layers.Layer):
         if self.enc_type == 'mono':
             if self.cell_type == 'gru':
                 encoder_output, encoder_state = result_encoder
+                # encoder_output: [batch_size, max_time, hidden_size]
+                # encoder_state: last hidden_state of encoder, [batch_size, hidden_size]
+                print("encoder_state: [batch_size, hidden_size]", encoder_state.shape)
+                print("encoder_output [batch_size, max_time, hidden_size]: ", encoder_output.shape)
             else:  # lstm
                 encoder_output, encoder_state_h, encoder_state_c = result_encoder
                 encoder_state = [encoder_state_h, encoder_state_c]
