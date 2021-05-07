@@ -82,7 +82,7 @@ class Decoder(tf.keras.layers.Layer):
                                          sequence_length=self.batch_sz*[self.max_length_output-1])
         else:
             start_tokens = tf.fill([self.batch_sz], start_token)
-
+            
             # From official documentation
             # NOTE If you are using the BeamSearchDecoder with a cell wrapped in AttentionWrapper, then you must ensure that:
             # The encoder output has been tiled to beam_width via tfa.seq2seq.tile_batch (NOT tf.tile).
@@ -90,6 +90,8 @@ class Decoder(tf.keras.layers.Layer):
             # The initial state created with get_initial_state above contains a cell_state value containing properly tiled final state from the encoder.
             enc_out = tfa.seq2seq.tile_batch(enc_output, multiplier=self.beam_width)
             self.attention_mechanism.setup_memory(enc_out)
+            print("beam_with * [batch_size, max_length_input, rnn_units] :  3 * [1, 16, 1024]] :", enc_out.shape)
+
 
             # set decoder_inital_state which is an AttentionWrapperState considering beam_width
             hidden_state = tfa.seq2seq.tile_batch(enc_hidden, multiplier=self.beam_width)
