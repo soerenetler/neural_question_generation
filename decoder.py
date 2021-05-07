@@ -51,7 +51,7 @@ class Decoder(tf.keras.layers.Layer):
         self.fc = tf.keras.layers.Dense(self.vocab_size)
 
         # Sampler
-        self.sampler = tfa.seq2seq.sampler.TrainingSampler()
+        self.train_sampler = tfa.seq2seq.sampler.TrainingSampler()
         # else:  # EVAL & TEST
         #   self.sampler = tfa.seq2seq.GreedyEmbeddingSampler()
 
@@ -64,8 +64,8 @@ class Decoder(tf.keras.layers.Layer):
                                                      self.attention_mechanism, attention_layer_size=self.hidden_size)
 
         # Define the decoder with respect to fundamental rnn cell
-        self.decoder = tfa.seq2seq.BasicDecoder(
-            self.rnn_cell, sampler=self.sampler, output_layer=self.fc)
+        self.train_decoder = tfa.seq2seq.BasicDecoder(
+            self.rnn_cell, sampler=self.train_sampler, output_layer=self.fc)
 
     def call(self, dec_input, enc_output, enc_hidden, start_token=1, end_token=2, training=False):
         # batch_size should not be specified
@@ -77,9 +77,13 @@ class Decoder(tf.keras.layers.Layer):
 
             decoder_initial_state = self.build_initial_state(
                 self.batch_sz, enc_hidden, tf.float32)
+            print("training - decoder_initial_state.shape: ", decoder_initial_state.shape)
             embd_input = self.embd_layer(dec_input)
-            outputs, _, _ = self.decoder(embd_input, initial_state=decoder_initial_state,
+            print("training - embd_input.shape: ", embd_input.shape)
+            outputs, _, _ = self.train_decoder(embd_input, initial_state=decoder_initial_state,
                                          sequence_length=self.batch_sz*[self.max_length_output-1])
+
+            print("training - outputs.shape: ", outputs.shape)
         else:
             start_tokens = tf.fill([self.batch_sz], start_token)
 
@@ -106,7 +110,7 @@ class Decoder(tf.keras.layers.Layer):
 
             # Instantiate BeamSearchDecoder
             decoder_instance = tfa.seq2seq.BeamSearchDecoder(
-                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc, length_penalty_weight=self.length_penalty_weight, embedding=self.embd_layer)
+                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc, length_penalty_weight=self.length_penalty_weight)
             decoder_embedding_matrix = self.embd_layer.variables[0]
             print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
 

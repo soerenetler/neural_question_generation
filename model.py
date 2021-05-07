@@ -66,7 +66,6 @@ class QG(tf.keras.Model):
 
         dec_hidden = enc_hidden
 
-        
         # Create AttentionWrapperState as initial_state for decoder
         pred = self.decoder(dec_input, enc_output, dec_hidden, training=training)
 
