@@ -111,8 +111,10 @@ class Decoder(tf.keras.layers.Layer):
             # outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width)
             # outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width)
             # Convert the shape of outputs and beam_scores to (inference_batch_size, beam_width, time_step_outputs)
+            print(type(outputs.beam_search_decoder_output))
             final_outputs = tf.transpose(outputs.predicted_ids, perm=(0,2,1))
             beam_scores = tf.transpose(outputs.beam_search_decoder_output.scores, perm=(0,2,1))
+            print("final_outputs ", final_outputs.shape)
             for beam, score in zip(final_outputs, beam_scores):
                 print(beam.shape, score.shape)
                 output = [a for a in beam]
@@ -120,7 +122,7 @@ class Decoder(tf.keras.layers.Layer):
                 for i in range(len(output)):
                     print('{} Predicted translation: {}  {}'.format(i+1, output[i], beam_score[i]))
 
-            print("final_outputs ", final_outputs.shape)
+            
             outputs = final_outputs[0]
         return outputs
 
