@@ -125,13 +125,6 @@ class Decoder(tf.keras.layers.Layer):
             beam_scores = tf.transpose(
                 outputs.beam_search_decoder_output.scores, perm=(0, 2, 1))
             print("final_outputs ", final_outputs.shape)
-            for beam, score in zip(final_outputs, beam_scores):
-                print(beam.shape, score.shape)
-                output = [a for a in beam]
-                beam_score = [a.sum() for a in score]
-                for i in range(len(output)):
-                    print('{} Predicted translation: {}  {}'.format(
-                        i+1, output[i], beam_score[i]))
 
             outputs = final_outputs[:,0,:]  # [batch, length]
         return outputs
