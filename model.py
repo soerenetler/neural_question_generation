@@ -60,7 +60,6 @@ class QG(tf.keras.Model):
             enc_inp = inputs
             dec_input = None
 
-        self.batch_size = tf.shape(input=enc_inp)[0]
         enc_hidden = self.encoder.initialize_hidden_state()
 
         enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden, training=training)

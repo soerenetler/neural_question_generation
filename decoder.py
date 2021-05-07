@@ -92,7 +92,9 @@ class Decoder(tf.keras.layers.Layer):
                 enc_output, multiplier=self.beam_width)
             self.attention_mechanism.setup_memory(enc_out)
             print(
-                "beam_with * [batch_size, max_length_input, rnn_units] :  3 * [1, 16, 1024]] :", enc_out.shape)
+                "enc_out.shape = beam_with * [batch_size, max_length_input, rnn_units] :", enc_out.shape)
+            print("enc_hidden.shape: ", enc_hidden.shape)
+            print("dec_input: ", dec_input)
 
             # set decoder_inital_state which is an AttentionWrapperState considering beam_width
             hidden_state = tfa.seq2seq.tile_batch(
@@ -116,20 +118,22 @@ class Decoder(tf.keras.layers.Layer):
             # outputs.beam_search_decoder_output is a tfa.seq2seq.BeamSearchDecoderOutput object which keep tracks of beam_scores and parent_ids while performing a beam decoding step
             # final_state = tfa.seq2seq.BeamSearchDecoderState object.
             # Sequence Length = [inference_batch_size, beam_width] details the maximum length of the beams that are generated
-
+            print("sequence_lengths.shape = [inference_batch_size, beam_width]: ", sequence_lengths.shape)
             # outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width)
             # outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width)
             # Convert the shape of outputs and beam_scores to (inference_batch_size, beam_width, time_step_outputs)
+            print("outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width): ", outputs.predicted_id.shape)
+            print("outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width): ", outputs.beam_search_decoder_output.scores.shape)
             print(type(outputs.beam_search_decoder_output))
             print("final_state", final_state)
-            print("sequence_lengths: ", sequence_lengths)
+            
             final_outputs = tf.transpose(outputs.predicted_ids, perm=(0, 2, 1))
             beam_scores = tf.transpose(
                 outputs.beam_search_decoder_output.scores, perm=(0, 2, 1))
-            print("final_outputs ", final_outputs.shape)
+            print("final_outputs.shape = (inference_batch_size, beam_width, time_step_outputs) ", final_outputs.shape)
 
             outputs = final_outputs[:,0,:]  # [batch, length]
-            print("outputs: ", outputs.shape)
+            print("outputs.shape = [batch, length]: ", outputs.shape)
         return outputs
 
         # Decoder initial state setting
