@@ -127,6 +127,7 @@ class Decoder(tf.keras.layers.Layer):
             print("final_outputs ", final_outputs.shape)
 
             outputs = final_outputs[:,0,:]  # [batch, length]
+            print("outputs: ", outputs.shape)
         return outputs
 
         # Decoder initial state setting
