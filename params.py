@@ -13,7 +13,7 @@ def basic_params():
         embedding_size=300,
         embedding_trainable=True,
         hidden_size=512,
-        cell_type='lstm',  # 'lstm' or 'gru'
+        cell_type='gru',  # 'lstm' or 'gru'
         enc_type='mono',  # 'bi' or 'mono'
         encoder_layer=1,
         decoder_layer=1,

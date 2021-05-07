@@ -62,7 +62,7 @@ class Encoder(tf.keras.layers.Layer):
         print("result_encoder:", result_encoder)
         if self.enc_type == 'mono':
             if self.cell_type == 'gru':
-                pass
+                encoder_output, encoder_state = result_encoder
             else:  # lstm
                 encoder_output, encoder_state_h, encoder_state_c = result_encoder
                 encoder_state = [encoder_state_h, encoder_state_c]
