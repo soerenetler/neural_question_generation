@@ -8,7 +8,7 @@ class Decoder(tf.keras.layers.Layer):
                  attn_type='bahdanau', voca_size=None,
                  beam_width=0, length_penalty_weight=1,
                  num_layer=1, hidden_size=512,
-                 cell_type='lstm', dropout=0.1, batch_sz=64, max_length_input=32, embedding_trainable=False,
+                 cell_type='lstm', dropout=0.1, batch_sz=64, max_length_input=32, max_length_output=60, embedding_trainable=False,
                  sample_prob=0.25):
 
         super(Decoder, self).__init__()
@@ -28,7 +28,7 @@ class Decoder(tf.keras.layers.Layer):
         self.embedding_trainable = embedding_trainable
         self.batch_sz = batch_sz
         self.max_length_input = max_length_input
-        self.max_length_output = max_length_input
+        self.max_length_output = max_length_output
 
         if self.pre_embedding == None:
             self.embd_layer = tf.keras.layers.Embedding(self.vocab_size,
@@ -71,19 +71,20 @@ class Decoder(tf.keras.layers.Layer):
         # batch_size should not be specified
         # if fixed, then the redundant evaluation data will make error
         # it may related to bug of tensorflow api
+        print("TRAINING - Decoder: ", training)
         if training:
             # Set the AttentionMechanism object with encoder_outputs
             self.attention_mechanism.setup_memory(enc_output)
 
             decoder_initial_state = self.build_initial_state(
                 self.batch_sz, enc_hidden, tf.float32)
-            print("training - decoder_initial_state.shape: ", decoder_initial_state.shape)
+            print("training - decoder_initial_state: ", decoder_initial_state)
             embd_input = self.embd_layer(dec_input)
             print("training - embd_input.shape: ", embd_input.shape)
             outputs, _, _ = self.train_decoder(embd_input, initial_state=decoder_initial_state,
                                          sequence_length=self.batch_sz*[self.max_length_output-1])
 
-            print("training - outputs.shape: ", outputs.shape)
+            print("training - outputs.shape: ", outputs.rnn_output.shape)
         else:
             start_tokens = tf.fill([self.batch_sz], start_token)
 

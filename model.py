@@ -26,6 +26,7 @@ class QG(tf.keras.Model):
         self.enc_layer = params['encoder_layer']
         self.dec_layer = params['decoder_layer']
         # for loss calculation
+        self.maxlen_s = params['maxlen_s'],
         self.maxlen_dec_train = params['maxlen_dec_train']
         self.maxlen_dec_dev = params['maxlen_dec_dev']  # for loss calculation
         self.rnn_dropout = params['dropout']
@@ -51,7 +52,7 @@ class QG(tf.keras.Model):
                                beam_width=self.beam_width, length_penalty_weight=self.length_penalty_weight,
                                num_layer=self.dec_layer, hidden_size=hidden_size,
                                cell_type=self.cell_type, dropout=self.rnn_dropout,
-                               sample_prob=self.sample_prob, batch_sz=64, max_length_input=32, embedding_trainable= False,)
+                               sample_prob=self.sample_prob, batch_sz=64, max_length_input=self.maxlen_s,max_length_output=self.maxlen_dec_train, embedding_trainable= False,)
 
     def call(self, inputs, training=False):
         if training:
@@ -60,6 +61,7 @@ class QG(tf.keras.Model):
             enc_inp = inputs
             dec_input = None
 
+        print("TRAINING: ", training)
         enc_hidden = self.encoder.initialize_hidden_state()
 
         enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden, training=training)
