@@ -3,3 +3,4 @@
 data/glove.840B.300d.txt
 data/glove.840B.300d.zip
 data/processed/*
+.vscode/*

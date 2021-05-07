@@ -1,33 +1,38 @@
+import nltk
 import numpy as np
 import tensorflow as tf
-import nltk
+import pickle as pkl
 
-
-def embed_op(inputs, pre_embedding, voca_size, embedding_size=None, embedding_trainable=False, dtype=tf.float32, name='embedding'):
-    if pre_embedding == None:
-        with tf.variable_scope('EmbeddingScope', reuse=tf.AUTO_REUSE):
-            embedding = tf.get_variable(
-                name,
-                [voca_size, embedding_size],
-                dtype=dtype,
-
-            )
+def remove_eos(sentence, eos='<EOS>', pad='<PAD>'):
+    if eos in sentence:
+        return sentence[:sentence.index(eos)] + '\n'
+    elif pad in sentence:
+        return sentence[:sentence.index(pad)] + '\n'
     else:
-        embedding = np.load(pre_embedding)
-        with tf.variable_scope('EmbeddingScope', reuse=tf.AUTO_REUSE):
-            init = tf.constant_initializer(embedding)
-            embedding_size = embedding.shape[-1]
-            embedding = tf.get_variable(
-                name,
-                [voca_size, embedding_size],
-                initializer=init,
-                dtype=dtype,
-                trainable=embedding_trainable
-            )
+        return sentence + '\n'
 
-    tf.summary.histogram(embedding.name + '/value', embedding)
-    return tf.nn.embedding_lookup(embedding, inputs), embedding
 
+def write_result(predict_results, dic_dir, pred_dir):
+    print('Load dic file...')
+    with open(dic_dir) as dic:
+        dic_file = pkl.load(dic)
+    reversed_dic = dict((y, x) for x, y in dic_file.iteritems())
+
+    print('Writing into file...')
+    with open(pred_dir, 'w') as f:
+        while True:
+            try:
+                output = predict_results.next()
+                output = output['question'].tolist()
+                if -1 in output:  # beam search
+                    output = output[:output.index(-1)]
+                indices = [reversed_dic[index] for index in output]
+                sentence = ' '.join(indices)
+                sentence = remove_eos(sentence)
+                f.write(sentence.encode('utf-8'))
+
+            except StopIteration:
+                break
 
 def bleu_score(labels, predictions,
                weights=None, metrics_collections=None,
@@ -51,5 +56,18 @@ def bleu_score(labels, predictions,
 
         return float(nltk.translate.bleu_score.corpus_bleu(labels, predictions))
 
-    score = tf.py_func(_nltk_blue_score, (labels, predictions), tf.float64)
-    return tf.metrics.mean(score * 100)
+    score = tf.py_function(_nltk_blue_score, (labels, predictions), tf.float64)
+    return tf.compat.v1.metrics.mean(score * 100)
+
+def loss_function(real, pred):
+    # real shape = (BATCH_SIZE, max_length_output)
+    # pred shape = (BATCH_SIZE, max_length_output, tar_vocab_size )
+    cross_entropy = tf.keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+    loss = cross_entropy(y_true=real, y_pred=pred)
+    # output 0 for y=0 else output 1
+    mask = tf.logical_not(tf.math.equal(real, 0))
+    mask = tf.cast(mask, loss.dtype)
+    loss = mask * loss
+    loss = tf.reduce_mean(loss)
+    return loss
