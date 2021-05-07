@@ -42,14 +42,14 @@ def main(unused):
     train_sentence = np.load(FLAGS.train_sentence)  # train_data
     train_question = np.load(FLAGS.train_question)  # train_label
     TRAIN_BUFFER_SIZE = len(train_sentence)
-    train_input_data = tf.data.Dataset.from_tensor_slices({'enc_inputs': train_sentence, 'dec_inputs': train_question}).shuffle(
+    train_input_data = tf.data.Dataset.from_tensor_slices((train_sentence, train_question)).shuffle(
         TRAIN_BUFFER_SIZE).batch(model_params['batch_size'], drop_remainder=True)
 
     # Evaluation dataset
     eval_sentence = np.load(FLAGS.eval_sentence)
     eval_question = np.load(FLAGS.eval_question)
     EVAL_BUFFER_SIZE = len(train_sentence)
-    eval_input_data = tf.data.Dataset.from_tensor_slices({'enc_inputs': eval_sentence, 'dec_inputs': eval_question}).shuffle(
+    eval_input_data = tf.data.Dataset.from_tensor_slices((eval_sentence, eval_question)).shuffle(
         EVAL_BUFFER_SIZE).batch(model_params['batch_size'], drop_remainder=True)
 
     # train and evaluate

@@ -80,8 +80,7 @@ class QG(tf.keras.Model):
 
     @tf.function
     def train_step(self, data):
-        encoder_inp = data["enc_inputs"]
-        targ  = data["dec_inputs"]
+        encoder_inp, targ= data
         loss = 0
 
         with tf.GradientTape() as tape:
