@@ -66,13 +66,15 @@ class Decoder(tf.keras.layers.Layer):
         self.decoder = tfa.seq2seq.BasicDecoder(
             self.rnn_cell, sampler=self.sampler, output_layer=self.fc)
 
-    def call(self, dec_input, decoder_initial_state, start_token=1, end_token=2, mode=tf.estimator.ModeKeys.TRAIN):
+    def call(self, dec_input, decoder_initial_state, start_token=1, end_token=2, training=False):
         # batch_size should not be specified
         # if fixed, then the redundant evaluation data will make error
         # it may related to bug of tensorflow api
-
-        embd_input = self.embd_layer(dec_input)
-        outputs, _, _ = self.decoder(embd_input, initial_state=decoder_initial_state, sequence_length=self.batch_sz*[self.max_length_output-1])
+        if training:
+            embd_input = self.embd_layer(dec_input)
+            outputs, _, _ = self.decoder(embd_input, initial_state=decoder_initial_state, sequence_length=self.batch_sz*[self.max_length_output-1])
+        else:
+            raise RuntimeError("Ups")
         return outputs
 
         # Decoder initial state setting
