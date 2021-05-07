@@ -109,7 +109,7 @@ class Decoder(tf.keras.layers.Layer):
             print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
 
             # The BeamSearchDecoder object's call() function takes care of everything.
-            outputs, _, _ = decoder_instance(
+            outputs,final_state, sequence_lengths = decoder_instance(
                 decoder_embedding_matrix, start_tokens=start_tokens, end_token=end_token, initial_state=decoder_initial_state)
             # outputs is tfa.seq2seq.FinalBeamSearchDecoderOutput object.
             # The final beam predictions are stored in outputs.predicted_id
@@ -121,6 +121,8 @@ class Decoder(tf.keras.layers.Layer):
             # outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width)
             # Convert the shape of outputs and beam_scores to (inference_batch_size, beam_width, time_step_outputs)
             print(type(outputs.beam_search_decoder_output))
+            print("final_state", final_state)
+            print("sequence_lengths: ", sequence_lengths)
             final_outputs = tf.transpose(outputs.predicted_ids, perm=(0, 2, 1))
             beam_scores = tf.transpose(
                 outputs.beam_search_decoder_output.scores, perm=(0, 2, 1))
