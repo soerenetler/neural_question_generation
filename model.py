@@ -72,10 +72,11 @@ class QG(tf.keras.Model):
 
         return pred
 
-    def compile(self, optimizer, loss_fn):
-        super(QG, self).compile()
-        self.optimizer = optimizer
-        self.loss_fn = loss_fn
+    #def compile(self, optimizer=optimizer, loss=loss_fn):
+    #    super(QG, self).compile()
+    #    self.optimizer = optimizer
+    #    self.loss_fn = loss_fn
+    #    self.metrics = 
 
     @tf.function
     def train_step(self, data):
@@ -89,7 +90,7 @@ class QG(tf.keras.Model):
             pred = self((encoder_inp, dec_input), training=True)  # Forward pass
 
             logits = pred.rnn_output
-            loss = self.loss_fn(real, logits)
+            loss = self.loss(real, logits)
 
         variables = self.encoder.trainable_variables + self.decoder.trainable_variables
         gradients = tape.gradient(loss, variables)

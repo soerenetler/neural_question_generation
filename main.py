@@ -9,6 +9,7 @@ import model
 import params
 
 from utils import remove_eos, write_result, loss_function
+from bleu_score import BleuScore
 
 FLAGS = flags.FLAGS
 
@@ -34,7 +35,8 @@ def main(unused):
 
     # Define estimator
     q_generation = model.QG(model_params)
-    q_generation.compile(tf.keras.optimizers.Adam(), loss_function)
+    q_generation.compile(optimizer=tf.keras.optimizers.Adam(), loss=loss_function,
+                         metrics=[BleuScore()])
 
     # Training dataset
     train_sentence = np.load(FLAGS.train_sentence)  # train_data
@@ -52,7 +54,9 @@ def main(unused):
 
     # train and evaluate
     if FLAGS.mode == 'train':
-        q_generation.fit(train_input_data, epochs=FLAGS.num_epochs)
+        q_generation.fit(train_input_data,
+                         epochs=FLAGS.num_epochs,
+                         validation_data=eval_input_data)
 
     elif FLAGS.mode == 'eval':
         q_generation.evaluate(eval_input_data)
