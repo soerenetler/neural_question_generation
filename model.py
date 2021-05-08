@@ -16,78 +16,84 @@ class QG(tf.keras.Model):
 
     def __init__(self, params):
         super(QG, self).__init__()
-        self.voca_size = params['voca_size']
+        self.vocab_size = params['voca_size']
         self.embedding_size = params['embedding_size']
         self.hidden_size = params['hidden_size']
         self.cell_type = params['cell_type']
         self.pre_embedding = params['pre_embedding']
         self.embedding_trainable = params['embedding_trainable']
         self.enc_type = params['enc_type']
-        self.enc_layer = params['encoder_layer']
-        self.dec_layer = params['decoder_layer']
+        self.num_layer = params['num_layer']
         # for loss calculation
-        self.maxlen_s = params['maxlen_s'],
+        self.batch_size = params['batch_size']
+        self.maxlen_s = params['maxlen_s']
         self.maxlen_dec_train = params['maxlen_dec_train']
         self.maxlen_dec_dev = params['maxlen_dec_dev']  # for loss calculation
         self.rnn_dropout = params['dropout']
         self.attn = params['attn']
         self.beam_width = params['beam_width']
         self.length_penalty_weight = params['length_penalty_weight']
-        self.sample_prob = params['sample_prob']
-        self.learning_rate = params['learning_rate']
-        self.decay_step = params['decay_step']  # learning rate decay
-        self.decay_rate = params['decay_rate']  # learning rate decay step
 
-        self.encoder = Encoder(pre_embedding=self.pre_embedding, vocab_size=self.voca_size, embedding_dim=self.embedding_size,
+        self.encoder = Encoder(pre_embedding=self.pre_embedding, vocab_size=self.vocab_size, embedding_dim=self.embedding_size,
                                embedding_trainable=self.embedding_trainable, enc_type=self.enc_type,
-                               num_layer=self.enc_layer, hidden_size=self.hidden_size,
-                               cell_type=self.cell_type, dropout=self.rnn_dropout, batch_sz=64
+                               num_layer=self.num_layer, hidden_size=self.hidden_size,
+                               cell_type=self.cell_type, dropout=self.rnn_dropout, batch_sz=self.batch_size
                                )
         if (self.enc_type == 'bi'):
             hidden_size = 2 * self.hidden_size
         else:
             hidden_size = self.hidden_size
-        self.decoder = Decoder(enc_type=self.enc_type,
-                               attn_type=self.attn, voca_size=self.voca_size,
+        self.decoder = Decoder(pre_embedding=self.pre_embedding, vocab_size=self.vocab_size, embedding_dim=self.embedding_size, enc_type=self.enc_type,
+                               attn_type=self.attn,
                                beam_width=self.beam_width, length_penalty_weight=self.length_penalty_weight,
-                               num_layer=self.dec_layer, hidden_size=hidden_size,
-                               cell_type=self.cell_type, dropout=self.rnn_dropout,
-                               sample_prob=self.sample_prob, batch_sz=64, max_length_input=self.maxlen_s,max_length_output=self.maxlen_dec_train, embedding_trainable= False,)
+                               num_layer=self.num_layer, dec_units=hidden_size,
+                               cell_type=self.cell_type, dropout=self.rnn_dropout, batch_sz=self.batch_size,
+                               max_length_input=self.maxlen_s, max_length_output=self.maxlen_dec_train, embedding_trainable=self.embedding_trainable)
 
     def call(self, inputs, training=False):
         if training:
             enc_inp, dec_input = inputs
-        else: # EVLA/PREDICT
+        else:  # EVLA/PREDICT
             enc_inp = inputs
             dec_input = None
 
         print("TRAINING: ", training)
         enc_hidden = self.encoder.initialize_hidden_state()
 
-        enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden, training=training)
+        enc_output, enc_hidden = self.encoder(
+            enc_inp, enc_hidden, training=training)
+
+        if training:
+            # Set the AttentionMechanism object with encoder_outputs
+            self.decoder.attention_mechanism.setup_memory(enc_output)
+        else:
+            # From official documentation
+            # NOTE If you are using the BeamSearchDecoder with a cell wrapped in AttentionWrapper, then you must ensure that:
+            # The encoder output has been tiled to beam_width via tfa.seq2seq.tile_batch (NOT tf.tile).
+            # The batch_size argument passed to the get_initial_state method of this wrapper is equal to true_batch_size * beam_width.
+            # The initial state created with get_initial_state above contains a cell_state value containing properly tiled final state from the encoder.
+            enc_out = tfa.seq2seq.tile_batch(
+                enc_output, multiplier=self.beam_width)
+            print("enc_out.shape = beam_with * [batch_size, max_length_input, rnn_units] :", enc_out.shape)
+            self.decoder.attention_mechanism.setup_memory(enc_out)
 
         dec_hidden = enc_hidden
 
         # Create AttentionWrapperState as initial_state for decoder
-        pred = self.decoder(dec_input, enc_output, dec_hidden, training=training)
+        pred = self.decoder(dec_input, dec_hidden, training=training)
 
         return pred
 
-    #def compile(self, optimizer=optimizer, loss=loss_fn):
-    #    super(QG, self).compile()
-    #    self.optimizer = optimizer
-    #    self.loss_fn = loss_fn
-    #    self.metrics = 
-
     @tf.function
     def train_step(self, data):
-        encoder_inp, targ= data
+        encoder_inp, targ = data
         loss = 0
 
         with tf.GradientTape() as tape:
             dec_input = targ[:, :-1]  # Ignore <end> token
             real = targ[:, 1:]         # ignore <start> token
-            pred = self((encoder_inp, dec_input), training=True)  # Forward pass
+            pred = self((encoder_inp, dec_input),
+                        training=True)  # Forward pass
 
             logits = pred.rnn_output
             loss = self.loss(real, logits)
@@ -152,38 +158,8 @@ class QG(tf.keras.Model):
     #         softmax_loss_function=None  # default : sparse_softmax_cross_entropy
     #     )
 
-    # def _update_or_output(self, predictions, labels, mode):
 
-    #     if mode == tf.estimator.ModeKeys.PREDICT:
-    #         return tf.estimator.EstimatorSpec(
-    #             mode=mode,
-    #             predictions={
-    #                 'question': predictions
-    #             })
-    #     eval_metric_ops = {
-    #         'bleu': utils.bleu_score(labels, self.predictions)
-    #     }
 
-    #     # Optimizer
-    #     if self.decay_step is not None:
-    #         self.learning_rate = tf.compat.v1.train.exponential_decay(
-    #             self.learning_rate,
-    #             tf.compat.v1.train.get_global_step(),
-    #             self.decay_step,
-    #             self.decay_rate,
-    #             staircase=True)
 
-    #     optimizer = tf.optimizers.Adam(self.learning_rate)
 
-    #     grad_and_var = optimizer.compute_gradients(
-    #         self.loss, tf.compat.v1.trainable_variables())
-    #     grad, var = zip(*grad_and_var)
-    #     # grad, norm = tf.clip_by_global_norm(grad, 5)
-    #     train_op = optimizer.apply_gradients(
-    #         zip(grad, var), global_step=tf.compat.v1.train.get_global_step())
-
-    #     return tf.estimator.EstimatorSpec(
-    #         mode=mode,
-    #         loss=self.loss,
-    #         train_op=train_op,
-    #         eval_metric_ops=eval_metric_ops)
+ 

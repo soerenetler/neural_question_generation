@@ -15,15 +15,14 @@ def basic_params():
         hidden_size=512,
         cell_type='gru',  # 'lstm' or 'gru'
         enc_type='mono',  # 'bi' or 'mono'
-        encoder_layer=1,
-        decoder_layer=1,
+        num_layer=1,
         dropout=0.4,
         attn='normed_bahdanau',  # 'bahdanau', 'normed_bahdanau', 'luong', 'scaled_luong'
-        beam_width=5,
+        beam_width=3,
         length_penalty_weight=2.1,
 
         # Extra params
-        dtype=tf.float32,
+        ##dtype=tf.float32,
         maxlen_s=60,
         maxlen_dec_train=32,
         maxlen_dec_dev=27,
@@ -32,10 +31,10 @@ def basic_params():
 
         # Learning params
         batch_size=64,
-        learning_rate=0.001,
-        decay_step=None,
-        decay_rate=0.5,
-        sample_prob=0.25,
+        ##learning_rate=0.001,
+        ##decay_step=None,
+        ##decay_rate=0.5,
+        ##sample_prob=0.25,
     )
 
 

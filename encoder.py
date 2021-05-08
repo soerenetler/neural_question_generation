@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
+from utils import _create_cell
 
 class Encoder(tf.keras.layers.Layer):
     def __init__(self, pre_embedding=None, vocab_size=34004, embedding_dim=300, embedding_trainable=True, enc_type='bi',
@@ -32,7 +33,8 @@ class Encoder(tf.keras.layers.Layer):
                                                         self.embedding_dim,
                                                         embeddings_initializer=init,
                                                         trainable=self.embedding_trainable)
-        enc_cell = self._create_cell()
+
+        enc_cell = _create_cell(self.hidden_size, self.cell_type, self.num_layer, dropout=self.dropout)
         print("get_initial_state:", enc_cell.get_initial_state(
             batch_size=64, dtype=tf.float32))
         # Encoder
@@ -100,12 +102,6 @@ class Encoder(tf.keras.layers.Layer):
                     encoder_state = tuple(_encoder_state)
 
         return encoder_output, encoder_state
-
-    # Build cell for encoder and decoder
-    def _create_cell(self):
-        rnn_cell = tf.keras.layers.GRUCell(
-            self.hidden_size, dropout=self.dropout) if self.cell_type == 'gru' else tf.keras.layers.LSTMCell(self.hidden_size, dropout=self.dropout)
-        return rnn_cell if self.num_layer == 1 else tf.keras.layers.StackedRNNCells(([rnn_cell for _ in range(self.num_layer)]))
 
     def initialize_hidden_state(self):
         if self.enc_type == 'mono':

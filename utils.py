@@ -2,6 +2,7 @@ import nltk
 import numpy as np
 import tensorflow as tf
 import pickle as pkl
+import tensorflow_addons as tfa
 
 def remove_eos(sentence, eos='<EOS>', pad='<PAD>'):
     if eos in sentence:
@@ -73,3 +74,38 @@ def loss_function(real, pred):
     loss = mask * loss
     loss = tf.reduce_mean(loss)
     return loss
+
+# Build cell for encoder and decoder
+def _create_cell(hidden_size, cell_type, num_layer, dropout=0.0):
+    rnn_cell = tf.keras.layers.GRUCell(
+        hidden_size, dropout=dropout) if cell_type == 'gru' else tf.keras.layers.LSTMCell(hidden_size, dropout=dropout)
+    return rnn_cell if num_layer == 1 else tf.keras.layers.StackedRNNCells(([rnn_cell for _ in range(num_layer)]))
+
+def build_attention_mechanism(dec_units, memory, memory_length, attention_type):
+    if attention_type == 'bahdanau':
+        return tfa.seq2seq.BahdanauAttention(
+            units=dec_units,
+            memory=memory,
+            memory_sequence_length=memory_length)
+    elif attention_type == 'normed_bahdanau':
+        return tfa.seq2seq.BahdanauAttention(
+            units=dec_units,
+            memory=memory,
+            memory_sequence_length=memory_length,
+            normalize=True)
+
+    elif attention_type == 'luong':
+        return tfa.seq2seq.LuongAttention(
+            units=dec_units,
+            memory=memory,
+            memory_sequence_length=memory_length)
+
+    elif attention_type == 'scaled_luong':
+        return tfa.seq2seq.LuongAttention(
+            units=dec_units,
+            memory=memory,
+            memory_sequence_length=memory_length,
+            scale=True)
+    else:
+        raise ValueError('Unknown attention mechanism : %s' %
+                            attention_type)
