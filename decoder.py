@@ -48,10 +48,12 @@ class Decoder(tf.keras.layers.Layer):
 
 
         if self.pre_embedding == None:
+            print("INIT - NO PREEMBEDDING")
             self.embedding  = tf.keras.layers.Embedding(self.vocab_size,
                                                         self.embedding_dim,
                                                         trainable=True)
         else:
+            print("INIT - PREEMBEDDING")
             embedding_matrix = np.load(self.pre_embedding)
             init = tf.keras.initializers.Constant(embedding_matrix)
             self.embedding  = tf.keras.layers.Embedding(self.vocab_size,
@@ -68,8 +70,7 @@ class Decoder(tf.keras.layers.Layer):
 
         # Sampler
         self.train_sampler = tfa.seq2seq.sampler.TrainingSampler()
-        # else:  # EVAL & TEST
-        #   self.sampler = tfa.seq2seq.GreedyEmbeddingSampler()
+        self.greedy_sampler = tfa.seq2seq.GreedyEmbeddingSampler()
 
         # Create attention mechanism with memory = None
         self.attention_mechanism = build_attention_mechanism(self.dec_units,
@@ -83,17 +84,18 @@ class Decoder(tf.keras.layers.Layer):
         self.train_decoder = tfa.seq2seq.BasicDecoder(
             self.rnn_cell, sampler=self.train_sampler, output_layer=self.fc)
 
+        self.greedy_decoder = tfa.seq2seq.BasicDecoder(cell=self.rnn_cell, sampler=self.greedy_sampler, output_layer=self.fc, maximum_iterations=10)
+  
+
     def call(self, dec_input, initial_state, start_token=1, end_token=2, training=False):
         # batch_size should not be specified
         # if fixed, then the redundant evaluation data will make error
         # it may related to bug of tensorflow api
         print("TRAINING - Decoder: ", training)
         if training:
-            decoder_initial_state = self.rnn_cell.get_initial_state(
-            batch_size=self.batch_sz, dtype=tf.float32)
-            print("decoder_initial_state: ", decoder_initial_state)
-            decoder_initial_state = decoder_initial_state.clone(
-                cell_state=initial_state)
+            inference_batch_size = dec_input.shape[0]
+            print("training - decoder - inference_batch_size: ", inference_batch_size)
+            decoder_initial_state = self.build_initial_state(self.batch_sz, initial_state, tf.float32)
 
             print("training - decoder_initial_state: ", decoder_initial_state)
             embd_input = self.embedding(dec_input)
@@ -103,7 +105,10 @@ class Decoder(tf.keras.layers.Layer):
                                                sequence_length=self.batch_sz*[self.max_length_output-1])
 
             print("training - outputs.shape: ", outputs.rnn_output.shape)
+            return outputs.rnn_output
         else:
+            inference_batch_size = dec_input.shape[0]
+            print("EVAL - decoder - inference_batch_size: ", inference_batch_size)
             #decoder_initial_state = self.build_initial_state(self.beam_width*self.batch_sz,
             #    initial_state, tf.float32)
             start_tokens = tf.fill([self.batch_sz], start_token)
@@ -112,52 +117,67 @@ class Decoder(tf.keras.layers.Layer):
             print("initial_state: ", initial_state)
             print("dec_input: ", dec_input)
 
-            # set decoder_inital_state which is an AttentionWrapperState considering beam_width
-            hidden_state = tfa.seq2seq.tile_batch(
-                initial_state, multiplier=self.beam_width)
-            decoder_initial_state = self.rnn_cell.get_initial_state(
-                batch_size=self.beam_width*self.batch_sz, dtype=tf.float32)
-            decoder_initial_state = decoder_initial_state.clone(
-                cell_state=hidden_state)
-            print("decoder_initial_state.cell_state: ", decoder_initial_state.cell_state.shape)
-            print("decoder_initial_state.attention: ", decoder_initial_state.attention.shape)
-            print("decoder_initial_state.alignments: ", decoder_initial_state.alignments.shape)
-            print("decoder_initial_state.attention_state: ", decoder_initial_state.attention_state.shape)
+            if False: #for greedy decoder
+                decoder_initial_state = self.build_initial_state(inference_batch_size, initial_state, tf.float32)
 
-            # Instantiate BeamSearchDecoder
-            decoder_instance = tfa.seq2seq.BeamSearchDecoder(
-                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc, length_penalty_weight=self.length_penalty_weight, maximum_iterations=10)
-            decoder_embedding_matrix = self.embedding .variables[0]
-            print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
+                ### Since the BasicDecoder wraps around Decoder's rnn cell only, you have to ensure that the inputs to BasicDecoder 
+                ### decoding step is output of embedding layer. tfa.seq2seq.GreedyEmbeddingSampler() takes care of this. 
+                ### You only need to get the weights of embedding layer, which can be done by decoder.embedding.variables[0] and pass this callabble to BasicDecoder's call() function
 
-            # The BeamSearchDecoder object's call() function takes care of everything.
-            outputs, final_state, sequence_lengths = decoder_instance(
-                decoder_embedding_matrix, start_tokens=start_tokens, end_token=end_token, initial_state=decoder_initial_state)
-            # outputs is tfa.seq2seq.FinalBeamSearchDecoderOutput object.
-            # The final beam predictions are stored in outputs.predicted_id
-            # outputs.beam_search_decoder_output is a tfa.seq2seq.BeamSearchDecoderOutput object which keep tracks of beam_scores and parent_ids while performing a beam decoding step
-            # final_state = tfa.seq2seq.BeamSearchDecoderState object.
-            # Sequence Length = [inference_batch_size, beam_width] details the maximum length of the beams that are generated
-            print(
-                "sequence_lengths.shape = [inference_batch_size, beam_width]: ", sequence_lengths.shape)
-            # outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width)
-            # outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width)
-            # Convert the shape of outputs and beam_scores to (inference_batch_size, beam_width, time_step_outputs)
-            print("outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width): ",
-                  outputs.predicted_ids.shape)
-            print("outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width): ",
-                  outputs.beam_search_decoder_output.scores.shape)
-            print(type(outputs.beam_search_decoder_output))
-            print("final_state", final_state)
+                decoder_embedding_matrix = self.embedding.variables[0]
+                print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
 
-            final_outputs = tf.transpose(outputs.predicted_ids, perm=(0, 2, 1))
-            beam_scores = tf.transpose(
-                outputs.beam_search_decoder_output.scores, perm=(0, 2, 1))
-            print("final_outputs.shape = (inference_batch_size, beam_width, time_step_outputs) ",
-                  final_outputs.shape)
+                outputs, _, _ = self.greedy_decoder(decoder_embedding_matrix, start_tokens = start_tokens, end_token= end_token, initial_state=decoder_initial_state)
+                return outputs.sample_id.numpy()
 
-            outputs = final_outputs[:, 0, :]  # [batch, length]
-            print("outputs.shape = [batch, length]: ", outputs.shape)
+
+            if True: # This is used for BeamSearchDecoder
+                # set decoder_inital_state which is an AttentionWrapperState considering beam_width
+                hidden_state = tfa.seq2seq.tile_batch(
+                    initial_state, multiplier=self.beam_width)
+                decoder_initial_state = self.rnn_cell.get_initial_state(
+                    batch_size=self.beam_width*self.batch_sz, dtype=tf.float32)
+                decoder_initial_state = decoder_initial_state.clone(
+                    cell_state=hidden_state)
+                print("decoder_initial_state.cell_state: ", decoder_initial_state.cell_state.shape)
+                print("decoder_initial_state.attention: ", decoder_initial_state.attention.shape)
+                print("decoder_initial_state.alignments: ", decoder_initial_state.alignments.shape)
+                print("decoder_initial_state.attention_state: ", decoder_initial_state.attention_state.shape)
+
+                # Instantiate BeamSearchDecoder
+                decoder_instance = tfa.seq2seq.BeamSearchDecoder(
+                    self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc, length_penalty_weight=self.length_penalty_weight, maximum_iterations=10)
+                decoder_embedding_matrix = self.embedding.variables[0]
+                print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
+
+                # The BeamSearchDecoder object's call() function takes care of everything.
+                outputs, final_state, sequence_lengths = decoder_instance(
+                    decoder_embedding_matrix, start_tokens=start_tokens, end_token=end_token, initial_state=decoder_initial_state)
+                # outputs is tfa.seq2seq.FinalBeamSearchDecoderOutput object.
+                # The final beam predictions are stored in outputs.predicted_id
+                # outputs.beam_search_decoder_output is a tfa.seq2seq.BeamSearchDecoderOutput object which keep tracks of beam_scores and parent_ids while performing a beam decoding step
+                # final_state = tfa.seq2seq.BeamSearchDecoderState object.
+                # Sequence Length = [inference_batch_size, beam_width] details the maximum length of the beams that are generated
+                print(
+                    "sequence_lengths.shape = [inference_batch_size, beam_width]: ", sequence_lengths.shape)
+                # outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width)
+                # outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width)
+                # Convert the shape of outputs and beam_scores to (inference_batch_size, beam_width, time_step_outputs)
+                print("outputs.predicted_id.shape = (inference_batch_size, time_step_outputs, beam_width): ",
+                    outputs.predicted_ids.shape)
+                print("outputs.beam_search_decoder_output.scores.shape = (inference_batch_size, time_step_outputs, beam_width): ",
+                    outputs.beam_search_decoder_output.scores.shape)
+                print(type(outputs.beam_search_decoder_output))
+                print("final_state", final_state)
+
+                final_outputs = tf.transpose(outputs.predicted_ids, perm=(0, 2, 1))
+                beam_scores = tf.transpose(
+                    outputs.beam_search_decoder_output.scores, perm=(0, 2, 1))
+                print("final_outputs.shape = (inference_batch_size, beam_width, time_step_outputs) ",
+                    final_outputs.shape)
+
+                outputs = final_outputs[:, 0, :]  # [batch, length]
+                print("outputs.shape = [batch, length]: ", outputs.shape)
         return outputs
 
         # Decoder initial state setting

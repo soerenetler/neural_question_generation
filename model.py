@@ -98,8 +98,7 @@ class QG(tf.keras.Model):
             pred = self((encoder_inp, dec_input),
                         training=True)  # Forward pass
             print("train_step - pred: ", pred)
-            logits = pred.rnn_output
-            loss = self.loss(real, logits)
+            loss = self.loss(real, pred)
 
         variables = self.encoder.trainable_variables + self.decoder.trainable_variables
         gradients = tape.gradient(loss, variables)
