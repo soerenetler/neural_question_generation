@@ -17,7 +17,7 @@ def basic_params():
         enc_type='mono',  # 'bi' or 'mono'
         num_layer=1,
         dropout=0.4,
-        attn='normed_bahdanau',  # 'bahdanau', 'normed_bahdanau', 'luong', 'scaled_luong'
+        attn='luong',  # 'bahdanau', 'normed_bahdanau', 'luong', 'scaled_luong'
         beam_width=3,
         length_penalty_weight=2.1,
 
@@ -25,7 +25,7 @@ def basic_params():
         ##dtype=tf.float32,
         maxlen_s=60,
         maxlen_dec_train=32,
-        maxlen_dec_dev=27,
+        maxlen_dec_dev=32,
         start_token=1,  # <GO> index
         end_token=2,  # <EOS> index
 

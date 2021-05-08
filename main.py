@@ -35,6 +35,7 @@ def main(unused):
 
     # Define estimator
     q_generation = model.QG(model_params)
+
     q_generation.compile(optimizer=tf.keras.optimizers.Adam(), loss=loss_function,
                          metrics=[BleuScore()])
 
@@ -57,8 +58,9 @@ def main(unused):
         example_input_batch, example_target_batch = next(iter(train_input_data))
         print("Shape train_input_data: ", example_input_batch.shape, example_target_batch.shape)
         q_generation.fit(train_input_data,
-                         epochs=FLAGS.num_epochs,
-                         validation_data=eval_input_data)
+                         epochs=FLAGS.num_epochs,)
+                         #validation_data=eval_input_data)
+        q_generation.summary()
 
     elif FLAGS.mode == 'eval':
         q_generation.evaluate(eval_input_data)

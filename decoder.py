@@ -30,6 +30,23 @@ class Decoder(tf.keras.layers.Layer):
         self.max_length_input = max_length_input
         self.max_length_output = max_length_output
 
+        print("INIT - decoder - num_layer: ", num_layer)
+        print("INIT - decoder - dec_units: ", dec_units)
+        print("INIT - decoder - cell_type: ", cell_type)
+        print("INIT - decoder - dropout: ", dropout)
+        print("INIT - decoder - enc_type: ", enc_type)
+        print("INIT - decoder - attn_type: ", attn_type)
+        print("INIT - decoder - beam_width: ", beam_width)
+        print("INIT - decoder - length_penalty_weight: ", length_penalty_weight)
+        print("INIT - decoder - pre_embedding: ", pre_embedding)
+        print("INIT - decoder - vocab_size: ", vocab_size)
+        print("INIT - decoder - embedding_dim: ", embedding_dim)
+        print("INIT - decoder - embedding_trainable: ", embedding_trainable)
+        print("INIT - decoder - batch_sz: ", batch_sz)
+        print("INIT - decoder - max_length_input: ", max_length_input)
+        print("INIT - decoder - max_length_output: ", max_length_output)
+
+
         if self.pre_embedding == None:
             self.embedding  = tf.keras.layers.Embedding(self.vocab_size,
                                                         self.embedding_dim,
@@ -42,7 +59,6 @@ class Decoder(tf.keras.layers.Layer):
                                                         embeddings_initializer=init,
                                                         trainable=self.embedding_trainable)
 
-        print("hidden_size:", self.dec_units)
 
         # Final Dense layer on which softmax will be applied
         self.fc = tf.keras.layers.Dense(self.vocab_size)
@@ -55,8 +71,6 @@ class Decoder(tf.keras.layers.Layer):
         # else:  # EVAL & TEST
         #   self.sampler = tfa.seq2seq.GreedyEmbeddingSampler()
 
-        print("INIT - decoder - max_length_input: ", max_length_input)
-        print("INIT - decoder - self.batch_sz: ", self.batch_sz)
         # Create attention mechanism with memory = None
         self.attention_mechanism = build_attention_mechanism(self.dec_units,
             None, self.batch_sz*[self.max_length_input], self.attn_type)
@@ -82,7 +96,7 @@ class Decoder(tf.keras.layers.Layer):
                 cell_state=initial_state)
 
             print("training - decoder_initial_state: ", decoder_initial_state)
-            embd_input = self.embedding (dec_input)
+            embd_input = self.embedding(dec_input)
             print("training - embd_input.shape: ", embd_input.shape)
             print("training - max_length_output: ", self.max_length_output)
             outputs, _, _ = self.train_decoder(embd_input, initial_state=decoder_initial_state,
@@ -93,8 +107,8 @@ class Decoder(tf.keras.layers.Layer):
             #decoder_initial_state = self.build_initial_state(self.beam_width*self.batch_sz,
             #    initial_state, tf.float32)
             start_tokens = tf.fill([self.batch_sz], start_token)
-
-            
+            print("start_tokens.shape: ", start_tokens.shape)
+            print("end_token: ", end_token)
             print("initial_state: ", initial_state)
             print("dec_input: ", dec_input)
 
@@ -112,7 +126,7 @@ class Decoder(tf.keras.layers.Layer):
 
             # Instantiate BeamSearchDecoder
             decoder_instance = tfa.seq2seq.BeamSearchDecoder(
-                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc, length_penalty_weight=self.length_penalty_weight)
+                self.rnn_cell, beam_width=self.beam_width, output_layer=self.fc, length_penalty_weight=self.length_penalty_weight, maximum_iterations=10)
             decoder_embedding_matrix = self.embedding .variables[0]
             print("decoder_embedding_matrix: ", decoder_embedding_matrix.shape)
 

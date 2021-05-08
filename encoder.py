@@ -20,6 +20,17 @@ class Encoder(tf.keras.layers.Layer):
         self.embedding_trainable = embedding_trainable
         self.batch_sz = batch_sz
 
+        print("INIT - encoder - num_layer: ", num_layer)
+        print("INIT - encoder - hidden_size: ", hidden_size)
+        print("INIT - encoder - cell_type: ", cell_type)
+        print("INIT - encoder - dropout: ", dropout)
+        print("INIT - encoder - enc_type: ", enc_type)
+        print("INIT - encoder - pre_embedding: ", pre_embedding)
+        print("INIT - encoder - vocab_size: ", vocab_size)
+        print("INIT - encoder - embedding_dim: ", embedding_dim)
+        print("INIT - encoder - embedding_trainable: ", embedding_trainable)
+        print("INIT - encoder - batch_sz: ", batch_sz)
+
         # Embedding Layer
         if self.pre_embedding == None:
             self.embd_layer = tf.keras.layers.Embedding(self.vocab_size,
@@ -54,19 +65,18 @@ class Encoder(tf.keras.layers.Layer):
 
     def call(self, inputs, hidden, training=False):
         embd_inputs = self.embd_layer(inputs)
-        print("embd_inputs:", embd_inputs.shape)
-        print("initial_state:", hidden)
-        print("rnn: ", self.rnn)
+        #print("embd_inputs:", embd_inputs.shape)
+        #print("initial_state:", hidden)
+        #print("rnn: ", self.rnn)
         result_encoder = self.rnn(
             embd_inputs, initial_state=hidden, training=training)
-        print("result_encoder:", result_encoder)
+        #print("result_encoder:", result_encoder)
         if self.enc_type == 'mono':
             if self.cell_type == 'gru':
                 encoder_output, encoder_state = result_encoder
                 # encoder_output: [batch_size, max_time, hidden_size]
                 # encoder_state: last hidden_state of encoder, [batch_size, hidden_size]
-                print("encoder_state: [batch_size, hidden_size]", encoder_state.shape)
-                print("encoder_output [batch_size, max_time, hidden_size]: ", encoder_output.shape)
+                
             else:  # lstm
                 encoder_output, encoder_state_h, encoder_state_c = result_encoder
                 encoder_state = [encoder_state_h, encoder_state_c]

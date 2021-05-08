@@ -57,11 +57,16 @@ class QG(tf.keras.Model):
             enc_inp = inputs
             dec_input = None
 
-        print("TRAINING: ", training)
+        print("CALL - model - TRAINING: ", training)
         enc_hidden = self.encoder.initialize_hidden_state()
+
+        print("CALL - model - enc_inp.shape: ", enc_inp.shape)
 
         enc_output, enc_hidden = self.encoder(
             enc_inp, enc_hidden, training=training)
+
+        print("CALL - model - enc_hidden: [batch_size, hidden_size]", enc_hidden.shape)
+        print("CALL - model - enc_output [batch_size, max_time, hidden_size]: ", enc_output.shape)
 
         if training:
             # Set the AttentionMechanism object with encoder_outputs
@@ -74,13 +79,11 @@ class QG(tf.keras.Model):
             # The initial state created with get_initial_state above contains a cell_state value containing properly tiled final state from the encoder.
             enc_out = tfa.seq2seq.tile_batch(
                 enc_output, multiplier=self.beam_width)
-            print("enc_out.shape = beam_with * [batch_size, max_length_input, rnn_units] :", enc_out.shape)
+            print("CALL - model - enc_out.shape = beam_with * [batch_size, max_length_input, rnn_units] :", enc_out.shape)
             self.decoder.attention_mechanism.setup_memory(enc_out)
 
-        dec_hidden = enc_hidden
-
         # Create AttentionWrapperState as initial_state for decoder
-        pred = self.decoder(dec_input, dec_hidden, training=training)
+        pred = self.decoder(dec_input, enc_hidden, start_token=self.GO, end_token=self.EOS, training=training)
 
         return pred
 
@@ -94,7 +97,7 @@ class QG(tf.keras.Model):
             real = targ[:, 1:]         # ignore <start> token
             pred = self((encoder_inp, dec_input),
                         training=True)  # Forward pass
-
+            print("train_step - pred: ", pred)
             logits = pred.rnn_output
             loss = self.loss(real, logits)
 
