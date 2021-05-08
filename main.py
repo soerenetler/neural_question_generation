@@ -36,7 +36,7 @@ def main(unused):
     # Define estimator
     q_generation = model.QG(model_params)
 
-    q_generation.compile(optimizer=tf.keras.optimizers.Adam(), loss=loss_function,
+    q_generation.compile(optimizer=tf.keras.optimizers.Adam(), loss=loss_function,run_eagerly=True,
                          metrics=[BleuScore()])
 
     # Training dataset
