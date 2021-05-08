@@ -75,8 +75,12 @@ class Decoder(tf.keras.layers.Layer):
         # it may related to bug of tensorflow api
         print("TRAINING - Decoder: ", training)
         if training:
-            decoder_initial_state = self.build_initial_state(self.batch_sz,
-                initial_state, tf.float32)
+            decoder_initial_state = self.rnn_cell.get_initial_state(
+            batch_size=self.batch_sz, dtype=tf.float32)
+            print("decoder_initial_state: ", decoder_initial_state)
+            decoder_initial_state = decoder_initial_state.clone(
+                cell_state=initial_state)
+
             print("training - decoder_initial_state: ", decoder_initial_state)
             embd_input = self.embedding (dec_input)
             print("training - embd_input.shape: ", embd_input.shape)
@@ -86,8 +90,8 @@ class Decoder(tf.keras.layers.Layer):
 
             print("training - outputs.shape: ", outputs.rnn_output.shape)
         else:
-            decoder_initial_state = self.build_initial_state(self.beam_width*self.batch_sz,
-                initial_state, tf.float32)
+            #decoder_initial_state = self.build_initial_state(self.beam_width*self.batch_sz,
+            #    initial_state, tf.float32)
             start_tokens = tf.fill([self.batch_sz], start_token)
 
             
@@ -101,6 +105,10 @@ class Decoder(tf.keras.layers.Layer):
                 batch_size=self.beam_width*self.batch_sz, dtype=tf.float32)
             decoder_initial_state = decoder_initial_state.clone(
                 cell_state=hidden_state)
+            print("decoder_initial_state.cell_state: ", decoder_initial_state.cell_state.shape)
+            print("decoder_initial_state.attention: ", decoder_initial_state.attention.shape)
+            print("decoder_initial_state.alignments: ", decoder_initial_state.alignments.shape)
+            print("decoder_initial_state.attention_state: ", decoder_initial_state.attention_state.shape)
 
             # Instantiate BeamSearchDecoder
             decoder_instance = tfa.seq2seq.BeamSearchDecoder(
