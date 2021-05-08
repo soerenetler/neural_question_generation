@@ -25,10 +25,10 @@ maxlen_s_train = 60
 maxlen_q_train = 30
 
 maxlen_s_dev = 60
-maxlen_q_dev = 25
+maxlen_q_dev = 30
 
 maxlen_s_test = 60
-maxlen_q_test = 25
+maxlen_q_test = 30
 
 dic_size = 34000
 vocab_dir = 'data/processed/vocab_xinyadu.dic'
