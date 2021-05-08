@@ -75,7 +75,7 @@ class Decoder(tf.keras.layers.Layer):
         # it may related to bug of tensorflow api
         print("TRAINING - Decoder: ", training)
         if training:
-            decoder_initial_state = self.build_initial_state(
+            decoder_initial_state = self.build_initial_state(self.batch_sz,
                 initial_state, tf.float32)
             print("training - decoder_initial_state: ", decoder_initial_state)
             embd_input = self.embedding (dec_input)
@@ -86,7 +86,7 @@ class Decoder(tf.keras.layers.Layer):
 
             print("training - outputs.shape: ", outputs.rnn_output.shape)
         else:
-            decoder_initial_state = self.build_initial_state(
+            decoder_initial_state = self.build_initial_state(self.beam_width*self.batch_sz,
                 initial_state, tf.float32)
             start_tokens = tf.fill([self.batch_sz], start_token)
 
@@ -204,9 +204,9 @@ class Decoder(tf.keras.layers.Layer):
 
     
 
-    def build_initial_state(self, encoder_state, Dtype):
+    def build_initial_state(self, batch_sz, encoder_state, Dtype):
         decoder_initial_state = self.rnn_cell.get_initial_state(
-            batch_size=self.batch_sz, dtype=Dtype)
+            batch_size=batch_sz, dtype=Dtype)
         print("decoder_initial_state: ", decoder_initial_state)
         decoder_initial_state = decoder_initial_state.clone(
             cell_state=encoder_state)
